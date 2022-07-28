@@ -18,7 +18,7 @@ For ROOT RDataFrame implementation, see: https://github.com/andriiknu/RDF
 using Pluto
 Pluto.run()
 ```
-6. Open up the `notebook.jl` and edit fiels in `/src` in your favourite editor.
+6. Open up the `notebook.jl` and edit files in `/src` in your favourite editor, `Revise.jl` will auto hot reload the code for you.
 
 The entry point to looper is this function:
 https://github.com/Moelf/LHC_AGC.jl/blob/2106790a8e417ade474d37993e1d059d29528af0/src/LHC_AGC.jl#L38
