@@ -19,3 +19,6 @@ using Pluto
 Pluto.run()
 ```
 6. Open up the `notebook.jl` and edit fiels in `/src` in your favourite editor.
+
+The entry point to looper is this function:
+https://github.com/Moelf/LHC_AGC.jl/blob/2106790a8e417ade474d37993e1d059d29528af0/src/LHC_AGC.jl#L38
