@@ -2,7 +2,7 @@ module LHC_AGC
 
 using UnROOT, FHist, LorentzVectorHEP, JSON3
 using LorentzVectorHEP: fromPxPyPzM
-using Combinatorics: combinations
+using Combinatorics: Combinations
 
 const xsec_info = Dict(
     :ttbar => 396.87 + 332.97, # nonallhad + allhad, keep same x-sec for all
@@ -39,15 +39,13 @@ function get_histo(tree, x_sec; nbins=25, bin_low=50, bin_high=550)
     nevts_total = length(tree)
     lumi = 3378 # /pb
     wgt = x_sec * lumi / nevts_total
-    
     hist_mass = Hist1D(Float64; bins = 50:20:550)
     
     for evt in tree
 
         # single lepton req.
         (; electron_pt, muon_pt) = evt
-        electron_pt_mask, muon_pt_mask = electron_pt .> 25, muon_pt .> 25
-        if count(electron_pt_mask) + count(muon_pt_mask) != 1
+        if count(>(25), electron_pt) + count(>(25), muon_pt) != 1
             continue
         end
 
@@ -64,14 +62,17 @@ function get_histo(tree, x_sec; nbins=25, bin_low=50, bin_high=550)
         # construct jet lorentz vector
         jet_p4 = @views fromPxPyPzM.(jet_px[jet_pt_mask], jet_py[jet_pt_mask], jet_pz[jet_pt_mask], jet_mass[jet_pt_mask])
 
-        length(jet_btag) == length(jet_p4) || error("impossible reached")
+        Njets = length(jet_btag) 
+        # Njets == length(jet_p4) || error("impossible reached")
 
         # tri jet combinatorics
         max_pt = -Inf
         local best_mass
         
         # 1. all tri-jet combinations
-        for (p4s, btags) in zip(combinations(jet_p4, 3), combinations(jet_btag, 3))
+        for comb in Combinations(Njets, 3)
+            p4s = @view jet_p4[comb]
+            btags = @view jet_btag[comb]
             # 2. keep those maximum(btags1,2,3) > 0.5
             maximum(btags) < 0.5 && continue
             tri = sum(p4s)

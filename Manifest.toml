@@ -674,7 +674,7 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[deps.LorentzVectorHEP]]
 deps = ["LorentzVectors"]
-git-tree-sha1 = "ea3deabb96e9019994811bdecc85190126b6cb83"
+git-tree-sha1 = "f174d2e809ab20e2e5a902d9899d0b0d73258edc"
 uuid = "f612022c-142a-473f-8cfd-a09cf3793c6c"
 version = "0.1.3"
 
