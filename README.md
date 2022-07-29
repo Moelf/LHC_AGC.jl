@@ -16,7 +16,7 @@ git clone https://github.com/Moelf/LHC_AGC.jl/ ~/.julia/environments/LHC_AGC
 4. run:
 ```julia
 using Pkg
-Pkg.instantiate()
+Pkg.instantiate() #only needed first time
 
 using Pluto
 Pluto.run()
