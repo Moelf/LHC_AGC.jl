@@ -4,90 +4,39 @@ using UnROOT, FHist, LorentzVectorHEP, JSON3
 using LorentzVectorHEP: fromPxPyPzM
 using Combinatorics: Combinations
 
-const xsec_info = Dict(
-    :ttbar => 396.87 + 332.97, # nonallhad + allhad, keep same x-sec for all
-    :single_top_s_chan => 2.0268 + 1.2676,
-    :single_top_t_chan => (36.993 + 22.175)/0.252,  # scale from lepton filter to inclusive
-    :single_top_tW => 37.936 + 37.906,
-    :wjets => 61457 * 0.252,  # e/mu+nu final states
-    :data => 1.0
-)
-const NJSON = JSON3.read(read("./ntuples.json"));
-const TAGS = keys(NJSON)
+include("constants.jl")
+include("main_loop.jl")
 
-const BASE_PATH = Ref("/data/jiling/Analysis_Grand_Challenge/")
+function nevts_total(tag, variation=:nominal)
+    NJSON[tag][variation][:nevts_total]
+end
 
+"""
+    Convert xrd path from JSON to local path
+"""
 function xrd_to_local(url)
     joinpath(BASE_PATH[], last(split(url, '/')))
 end
 
-
-const TAG_PATH_DICT = Dict(k=>LHC_AGC.xrd_to_local.(getindex.(LHC_AGC.NJSON[k][:nominal][:files], :path))
+const TAG_PATH_DICT = Dict(k=>xrd_to_local.(getindex.(NJSON[k][:nominal][:files], :path))
        for k in LHC_AGC.TAGS
       )
 
-function get_histo(tag::Symbol, N)
-    x_sec = xsec_info[tag]
-    fs = @view TAG_PATH_DICT[tag][begin:N]
-    mapreduce(+, fs) do path
-        tree = LazyTree(path, "events")
-        get_histo(tree, x_sec)
-    end
-end
-
-function get_histo(tree, x_sec; nbins=25, bin_low=50, bin_high=550)
-    nevts_total = length(tree)
-    lumi = 3378 # /pb
-    wgt = x_sec * lumi / nevts_total
-    hist_mass = Hist1D(Float64; bins = 50:20:550)
-    
-    for evt in tree
-
-        # single lepton req.
-        (; electron_pt, muon_pt) = evt
-        if count(>(25), electron_pt) + count(>(25), muon_pt) != 1
-            continue
-        end
-
-        # 4 jets req.
-        (; jet_pt) = evt
-        jet_pt_mask = jet_pt .> 25
-        count(jet_pt_mask) < 4 && continue
-
-        # btag req.
-        jet_btag = @view evt.jet_btag[jet_pt_mask]
-        count(>=(0.5), jet_btag) < 2 && continue
-        (; jet_px, jet_py, jet_pz, jet_mass) = evt
-
-        # construct jet lorentz vector
-        jet_p4 = @views fromPxPyPzM.(jet_px[jet_pt_mask], jet_py[jet_pt_mask], jet_pz[jet_pt_mask], jet_mass[jet_pt_mask])
-
-        Njets = length(jet_btag) 
-        # Njets == length(jet_p4) || error("impossible reached")
-
-        # tri jet combinatorics
-        max_pt = -Inf
-        local best_mass
-        
-        # 1. all tri-jet combinations
-        for comb in Combinations(Njets, 3)
-            p4s = @view jet_p4[comb]
-            btags = @view jet_btag[comb]
-            # 2. keep those maximum(btags1,2,3) > 0.5
-            maximum(btags) < 0.5 && continue
-            tri = sum(p4s)
-            _pt = pt(tri)
-            # 3. pick the tri-p4 with highest tri-pt
-            if _pt > max_pt
-                max_pt = _pt
-                best_mass = mass(tri)
+function download_data(N = MAX_N_FILES_PER_SAMPLE[])
+    for key in keys(NJSON)
+        Threads.@threads for n in first(NJSON[key][:nominal][:files], N)
+            url = n[:path]
+            fname = last(split(url, '/'))
+            dir = BASE_PATH[]
+            if !isdir(dir)
+                mkdir(dir)
             end
+            out = joinpath(dir, fname)
+            isfile(out) && continue
+            download(url, out)
         end
-        
-        # tri-p4 with highest tri-pt first
-        push!(hist_mass, best_mass, wgt)
     end
-    return hist_mass
+    nothing
 end
 
 end
