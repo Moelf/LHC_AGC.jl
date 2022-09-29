@@ -17,7 +17,7 @@ end
 function markdown_files()
     md_files = map(notebooks) do notebook
         file = lowercase(replace(notebook, " " => '_'))
-        return joinpath("notebooks", "$file.md")
+        return "$file.md"
     end
     return md_files
 end
