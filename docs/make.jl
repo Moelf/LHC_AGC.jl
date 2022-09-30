@@ -10,7 +10,7 @@ include("build.jl")
 
 build()
 md_files = markdown_files()
-T = [t => f for (t, f) in zip(notebooks, md_files)]
+# T = [t => f for (t, f) in zip(notebooks, md_files)]
 
 makedocs(;
     modules=Module[],
@@ -18,10 +18,10 @@ makedocs(;
         prettyurls = get(ENV, "CI", nothing) == "true",
     ),
     pages=[
-        "Notebooks" => T,
+           "Notebooks" => only(md_files),
     ],
     repo="https://github.com/Moelf/LHC_AGC.jl/blob/{commit}{path}#L{line}",
-    sitename="LHC Analysis Grand Challengt",
+    sitename="LHC Analysis Grand Challeng",
     authors="Jerry Ling",
 )
 
