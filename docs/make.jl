@@ -23,7 +23,6 @@ makedocs(;
     repo="https://github.com/Moelf/LHC_AGC.jl/blob/{commit}{path}#L{line}",
     sitename="LHC Analysis Grand Challengt",
     authors="Jerry Ling",
-    assets=String[],
 )
 
 deploydocs(;

@@ -1,4 +1,4 @@
-tutorials_dir = joinpath(dirname(@__DIR__))
+tutorials_dir = dirname(@__DIR__)
 
 """Run all Pluto notebooks (".jl" files) in `tutorials_dir` and write outputs to HTML files."""
 function build()
@@ -17,7 +17,9 @@ end
 function markdown_files()
     md_files = map(notebooks) do notebook
         file = lowercase(replace(notebook, " " => '_'))
-        return "$file.md"
+        fmd = "$file.md"
+        mv(joinpath(tutorials_dir, fmd), joinpath(@__DIR__, "src", fmd); force=true)
+        return fmd
     end
     return md_files
 end
