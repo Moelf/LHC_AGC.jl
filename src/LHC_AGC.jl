@@ -3,9 +3,11 @@ module LHC_AGC
 using UnROOT, FHist, LorentzVectorHEP, JSON3
 using LorentzVectorHEP: fromPxPyPzM
 using Combinatorics: Combinations
+using Distributions
 
 include("constants.jl")
 include("main_loop.jl")
+include("syst_utils.jl")
 
 function nevts_total(tag, variation=:nominal)
     NJSON[tag][variation][:nevts_total]
