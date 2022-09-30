@@ -4,7 +4,6 @@ Analysis Grand Challenge @ LHC in pure Julia
 For ROOT RDataFrame implementation, see: https://github.com/andriiknu/RDF
 
 # Running instruction
-**Note: currently only works if you're on af.uchicago.edu because that's where files are.**
 
 1. download Julia somehow, preferably same version as:
 https://github.com/Moelf/LHC_AGC.jl/blob/master/Manifest.toml#L1-L5
