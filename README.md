@@ -4,9 +4,6 @@ Analysis Grand Challenge @ LHC in pure Julia, this repo is set-up to render the 
 
 note: for RDataFrame implementation, see: https://github.com/andriiknu/RDF
 
-# Making contribution
-
-
 # Instruction for running locally
 1. download Julia somehow, preferably same version as:
 https://github.com/Moelf/LHC_AGC.jl/blob/master/Manifest.toml#L1-L5
