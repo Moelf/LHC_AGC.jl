@@ -1,19 +1,10 @@
-function dict_hist_reduction(d1::Dict{K, V}, d2::Dict{K, V}) where {K, V} # this might also be possible to do with some built-in shorter methods, I didn't think about it for now
-    d3 = Dict{K, V}()
-    for (key, val) in d1 # assume that d1 and d2 have the same keys
-        d3[key] = val + d2[key]
-    end
-    d3
-end
-
-function get_histo(tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
-    lumi = 3378 # /pb
+function get_histo(process_tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
     N = n_files_max_per_sample
     if iszero(wgt)
-        wgt = lumi * xsec_info[tag] / nevts_total(tag)
+        wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
     end
-    fs = @view TAG_PATH_DICT[tag][begin:N]
-    mapreduce(dict_hist_reduction, fs) do path #
+    fs = @view TAG_PATH_DICT[process_tag][begin:N]
+    mapreduce(mergewith(+), fs) do path #
         tree = LazyTree(path, "events")
         get_histo(tree, wgt)
     end
@@ -28,24 +19,24 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
     
     for evt in tree
         # single lepton requirement
-        (; electron_pt, muon_pt) = evt
-        if count(>(25), electron_pt) + count(>(25), muon_pt) != 1
+        (; Electron_pt, Muon_pt) = evt
+        if count(>(25), Electron_pt) + count(>(25), Muon_pt) != 1
             continue
         end
 
         # at least 4 jets
-        (; jet_pt) = evt
-        jet_pt_mask = jet_pt .> 25
+        (; Jet_pt) = evt
+        jet_pt_mask = Jet_pt .> 25
         count(jet_pt_mask) < 4 && continue
 
-        jet_btag = @view evt.jet_btag[jet_pt_mask]
+        jet_btag = @view evt.Jet_btagCSVV2[jet_pt_mask]
 
         # MASS HISTOGRAM
         if count(>=(0.5), jet_btag) >= 2 # at least 2 btag
-            (; jet_px, jet_py, jet_pz, jet_mass) = evt
+            (; Jet_px, Jet_py, Jet_pz, Jet_mass) = evt
 
             # construct jet lorentz vector
-            jet_p4 = @views fromPxPyPzM.(jet_px[jet_pt_mask], jet_py[jet_pt_mask], jet_pz[jet_pt_mask], jet_mass[jet_pt_mask])
+            jet_p4 = @views fromPxPyPzM.(Jet_px[jet_pt_mask], Jet_py[jet_pt_mask], Jet_pz[jet_pt_mask], Jet_mass[jet_pt_mask])
 
             Njets = length(jet_btag) 
             # Njets == length(jet_p4) || error("impossible reached")
@@ -76,7 +67,7 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
         # HT HISTOGRAM
         if count(>=(0.5), jet_btag) == 1 # no more than 1 btag
     
-            HT = @views sum(jet_pt[jet_pt_mask])
+            HT = @views sum(Jet_pt[jet_pt_mask])
     
             # HT
             push!(hist_HT, HT, wgt)

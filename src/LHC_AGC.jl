@@ -9,8 +9,8 @@ include("constants.jl")
 include("main_loop.jl")
 include("syst_utils.jl")
 
-function nevts_total(tag, variation=:nominal)
-    NJSON[tag][variation][:nevts_total]
+function nevts_total(process_tag, variation=:nominal)
+    NJSON[process_tag][variation][:nevts_total]
 end
 
 """
