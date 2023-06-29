@@ -6,7 +6,7 @@ const xsec_info = Dict(
     :wjets => 61457 * 0.252,  # e/mu+nu final states
     :data => 1.0
 )
-const NJSON = joinpath(dirname(@__DIR__), "ntuples_nanoaod.json") |> read |> JSON3.read;
+const NJSON = joinpath(dirname(@__DIR__), "nanoaod_inputs_small.json") |> read |> JSON3.read;
 const TAGS = keys(NJSON)
 
 const BASE_PATH = Ref(joinpath(dirname(@__DIR__), "data"))

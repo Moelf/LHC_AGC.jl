@@ -18,8 +18,9 @@ using BenchmarkTools, PlutoUI # hide
 
 # ╔═╡ 5f403020-c4ba-4814-926d-389e2347e9d2
 # by default download 1 file per sample
-LHC_AGC.download_data()
+LHC_AGC.download_data() # this might take a long time with the current
 
+#=
 # ╔═╡ c82d8346-fa92-4159-b4ac-85ecfe035297
 md"""
 ## Introduction: exploring $t\bar{t}$
@@ -49,6 +50,7 @@ end
 
 # ╔═╡ dbfd0d3c-2b83-48ba-b2df-ba93a4a7d34d
 Hist1D(_c, 2:10)
+=#
 
 # ╔═╡ f80e56a0-2ffb-44c8-a11d-6922c96d3188
 md"""

@@ -8,7 +8,6 @@ function btag_weight_variation(jet_pt)
     1 + pt_var, 1 - pt_var
 end
 
-function jet_pt_resolution(pt)
-    d = Normal(1, 0.05)
-    rand(d)
+function jet_pt_resolution(pt; distr=Normal(1, 0.05))
+    rand(distr)*pt
 end
