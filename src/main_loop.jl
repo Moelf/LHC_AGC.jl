@@ -5,11 +5,15 @@ function get_histo(process_tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_
     end
     fs = @view TAG_PATH_DICT[process_tag][begin:N]
     println(fs)
-    mapreduce(mergewith(mergewith(+)), fs) do path #
+    hists = mapreduce(mergewith(mergewith(+)), fs) do path #
         println(path)
         tree = LazyTree(path, "Events")
         get_histo(tree, wgt; start=start, stop=stop, nbins=nbins)
     end
+    h_nom = hists["nominal"]
+    hists["luminocity_up"] = Dict(k => h_nom[k]*1.03 for k in keys(h_nom))
+    hists["luminocity_down"] = Dict(k => h_nom[k]*0.97 for k in keys(h_nom))
+    hists
 end
 
 """
@@ -44,15 +48,18 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
         "pt_res" => jet_pt_resolution
     )
     
-    for hist_type in keys(hists)
-        for evt in tree
-            # single lepton requirement
-            (; Electron_pt, Muon_pt) = evt
-            (count(>(25), Electron_pt) + count(>(25), Muon_pt) != 1) && continue
+    for evt in tree
+        # single lepton requirement
+        (; Electron_pt, Muon_pt) = evt
+        (count(>(25), Electron_pt) + count(>(25), Muon_pt) != 1) && continue
 
-            # get and modify pt
-            (; Jet_pt) = evt
-            Jet_pt = pt_var[hist_type].(Jet_pt)
+        # get pt
+        (; Jet_pt) = evt
+        Jet_pt_nominal = Jet_pt
+
+        for hist_type in keys(hists)
+            # modify pt
+            Jet_pt = pt_var[hist_type].(Jet_pt_nominal)
 
             # at least 4 jets
             jet_pt_mask = Jet_pt .> 25
