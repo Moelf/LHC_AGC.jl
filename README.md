@@ -1,4 +1,4 @@
-# LHC_AGC.jl [(Link to rendered notebook)](https://moelf.github.io/LHC_AGC.jl/dev/notebook/)
+# LHC_AGC.jl [(Link to rendered notebook)](https://moelf.github.io/LHC_AGC.jl/)
 
 Analysis Grand Challenge @ LHC in pure Julia, this repo is set-up to render the Pluto notebook automatically, so feel free to contribute!
 
