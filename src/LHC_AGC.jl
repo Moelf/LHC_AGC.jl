@@ -24,8 +24,13 @@ const TAG_PATH_DICT = Dict(k=>xrd_to_local.(getindex.(NJSON[k][:nominal][:files]
        for k in LHC_AGC.TAGS
       )
 
-function download_data(N = MAX_N_FILES_PER_SAMPLE[])
-    for key in keys(NJSON)
+"""
+    download_data(N; process_tags=[:ttbar])
+
+Download `N` files for each of the process tags.
+"""
+function download_data(N = MAX_N_FILES_PER_SAMPLE[]; process_tags = [:ttbar])
+    for key in process_tags
         Threads.@threads for n in first(NJSON[key][:nominal][:files], N)
             url = n[:path]
             fname = last(split(url, '/'))

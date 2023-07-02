@@ -43,8 +43,8 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
     )
     pt_var = Dict(
         "nominal" => identity,
-        "pt_scale_up" => (pt)->1.03pt,
-        "pt_scale_down" => (pt)->0.97pt,
+        "pt_scale_up" => (pt)->1.03f0 * pt,
+        "pt_scale_down" => (pt)->0.97f0 * pt,
         "pt_res" => jet_pt_resolution
     )
     
