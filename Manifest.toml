@@ -1467,9 +1467,9 @@ version = "1.0.2"
 
 [[deps.UnROOT]]
 deps = ["AbstractTrees", "ArraysOfArrays", "BitIntegers", "CodecLz4", "CodecXz", "CodecZstd", "HTTP", "IterTools", "LRUCache", "LibDeflate", "LorentzVectors", "Memoization", "Mixers", "Mmap", "Parameters", "PrettyTables", "SentinelArrays", "StaticArrays", "StructArrays", "Tables", "xrootdgo_jll"]
-git-tree-sha1 = "580d27ed9a8a9e47b7ebfef56071d1ec747cd3a0"
+git-tree-sha1 = "364e8809dc7545f3cd5309ff50ba1f3065806cd6"
 uuid = "3cd96dde-e98d-4713-81e9-a4a1b0235ce9"
-version = "0.10.12"
+version = "0.10.15"
 
 [[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"

@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.12
+# v0.19.26
 
 using Markdown
 using InteractiveUtils
@@ -18,7 +18,10 @@ using BenchmarkTools, PlutoUI # hide
 
 # ╔═╡ 5f403020-c4ba-4814-926d-389e2347e9d2
 # by default download 1 file per sample
-LHC_AGC.download_data()
+LHC_AGC.download_data() # this might take a long time with the current
+
+# ╔═╡ 23afac95-4797-4b5c-b7f1-6340313925d9
+tt_sample = first(readdir(LHC_AGC.BASE_PATH[]; join=true))
 
 # ╔═╡ c82d8346-fa92-4159-b4ac-85ecfe035297
 md"""
@@ -26,10 +29,10 @@ md"""
 """
 
 # ╔═╡ c0175af3-2903-4def-8599-da934fc28803
-const tt_tree = LazyTree(joinpath(LHC_AGC.BASE_PATH[], "00DF0A73-17C2-E511-B086-E41D2D08DE30.root"), "events"); # hide
+const tt_tree = LazyTree(tt_sample, "Events"); # hide
 
 # ╔═╡ 87017bd9-8622-43c5-aa44-f24a6c1b39b1
-njet_hist = Hist1D((length(x) for x in tt_tree.jet_pt), 0:16; overflow=true)
+njet_hist = Hist1D((length(x) for x in tt_tree.Jet_pt), 0:16; overflow=true)
 
 # ╔═╡ 72be7e4c-d85a-4795-ba36-4e83771ba160
 # chop off the overflow bin
@@ -38,7 +41,7 @@ integral(restrict(njet_hist, 0, 15))
 # ╔═╡ 92cd3a46-10bf-4b52-ad1a-ae07459830c8
 with_terminal() do
 	# this is a lazy generator, evident since it has 0 allocation
-	global _c = @time (count(>(25), x) for x in tt_tree.jet_pt)
+	global _c = @time (count(>(25), x) for x in tt_tree.Jet_pt)
 end
 
 # ╔═╡ 33b8830a-8365-4a37-ad12-180113101700
@@ -77,33 +80,6 @@ You can find the full function in the `main_looper.jl` file, and look below this
 	count(>=(0.5), jet_btag) < 2 && continue
 	(; jet_px, jet_py, jet_pz, jet_mass) = evt
 ```
-
-### Tri-jet combinatorics
-```julia
-	# construct jet lorentz vector
-	jet_p4 = @views fromPxPyPzM.(jet_px[jet_pt_mask], jet_py[jet_pt_mask], jet_pz[jet_pt_mask], jet_mass[jet_pt_mask])
-
-	# tri jet combinatorics
-	max_pt = -Inf
-	local best_mass
-	
-	# 1. all tri-jet combinations
-	# again it's lazy, avoid allocating a bunch of 3-tuples
-	for comb in Combinations(Njets, 3)
-		p4s = @view jet_p4[comb]
-		btags = @view jet_btag[comb]
-		# 2. keep those maximum(btags1,2,3) > 0.5
-		maximum(btags) < 0.5 && continue
-		tri = sum(p4s)
-		_pt = pt(tri)
-		# 3. pick the tri-p4 with highest tri-pt
-		if _pt > max_pt
-			max_pt = _pt
-			best_mass = mass(tri)
-		end
-	end
-
-```
 """
 
 # ╔═╡ e484f0c5-73fc-40a3-b875-ee8a9e939e17
@@ -112,13 +88,15 @@ res = @time LHC_AGC.get_histo(:ttbar; wgt=1.0, n_files_max_per_sample=1);
 
 # ╔═╡ 516e76f1-cc21-49b5-8a02-be47318e78ad
 begin
-	stairs(res, 
+	nominal_hist = res["nominal"]["4j2b"]
+	stairs(nominal_hist,
 		axis=(xlabel="mass (GeV)", ylabel="# events", 
-		limits=(0,375,0,1000),
-		yticks=0:200:1000,
+		limits=(0,375,0,30000),
+		xticks=0:50:400,
+		yticks=0:5000:80000,
 		)
 	)
-	errorbars!(res)
+	errorbars!(nominal_hist)
 	vlines!(175, color=:grey, linestyle=:dash)
     text!(180, 20, text = L"m_t = 175 \mathrm{GeV}")
 	current_figure()
@@ -128,6 +106,7 @@ end
 # ╠═524225b9-d165-47ab-9c49-dffbd93393aa
 # ╠═97e9c1f4-d444-4db6-9037-28a68f2deccd
 # ╠═5f403020-c4ba-4814-926d-389e2347e9d2
+# ╠═23afac95-4797-4b5c-b7f1-6340313925d9
 # ╟─c82d8346-fa92-4159-b4ac-85ecfe035297
 # ╠═c0175af3-2903-4def-8599-da934fc28803
 # ╠═87017bd9-8622-43c5-aa44-f24a6c1b39b1
