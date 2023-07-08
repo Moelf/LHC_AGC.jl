@@ -54,12 +54,42 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
             "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
         ),
 
-        "btag_var_i_up" => Dict(
+        "btag_var_0_up" => Dict(
             "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
             "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
         ),
 
-        "btag_var_i_down" => Dict(
+        "btag_var_0_down" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_1_up" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_1_down" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_2_up" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_2_down" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_3_up" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_3_down" => Dict(
             "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
             "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
         ),
@@ -125,8 +155,10 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
                         push!(hists["scale_var_up"]["4j2b"], best_mass, 1.025f0*wgt)
                         push!(hists["scale_var_down"]["4j2b"], best_mass, 0.975f0*wgt)
                         btag_var_up, btag_var_down = btag_weight_variation(Jet_pt[1:4])
-                        push!(hists["btag_var_i_up"]["4j2b"], best_mass, btag_var_up*wgt)
-                        push!(hists["btag_var_i_down"]["4j2b"], best_mass, btag_var_down*wgt)
+                        for k in 0:3
+                            push!(hists["btag_var_$(k)_up"]["4j2b"], best_mass, btag_var_up[k+1]*wgt)
+                            push!(hists["btag_var_$(k)_down"]["4j2b"], best_mass, btag_var_down[k+1]*wgt)
+                        end
                     end
                 end
 
@@ -138,8 +170,10 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
                         push!(hists["scale_var_up"]["4j1b"], HT, 1.025f0*wgt)
                         push!(hists["scale_var_down"]["4j1b"], HT, 0.975f0*wgt)
                         btag_var_up, btag_var_down = btag_weight_variation(Jet_pt[1:4])
-                        push!(hists["btag_var_i_up"]["4j1b"], HT, btag_var_up*wgt)
-                        push!(hists["btag_var_i_down"]["4j1b"], HT, btag_var_down*wgt)
+                        for k in 0:3
+                            push!(hists["btag_var_$(k)_up"]["4j1b"], HT, btag_var_up[k+1]*wgt)
+                            push!(hists["btag_var_$(k)_down"]["4j1b"], HT, btag_var_down[k+1]*wgt)
+                        end
                     end
                 end
             end
