@@ -25,23 +25,23 @@ end
 function get_histo(tree, wgt; nbins=26, start=0, stop=375)
     hists = Dict(
         "nominal" => Dict(
-            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
-            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+            "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start, stop, length=nbins))
         ),
 
         "pt_scale_up" => Dict(
-            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
-            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+            "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start, stop, length=nbins))
         ),
 
         "pt_scale_down" => Dict(
-            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
-            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+            "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start, stop, length=nbins))
         ),
 
         "pt_res" => Dict(
-            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
-            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+            "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start, stop, length=nbins))
         ),
 
         "scale_var_up" => Dict(
@@ -101,6 +101,7 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
         "pt_res" => jet_pt_resolution
     )
     
+    #evts = Int[]
     for evt in tree
         # single lepton requirement
         (; Electron_pt, Muon_pt) = evt
@@ -119,8 +120,13 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
             if count(jet_pt_mask) >= 4
                 jet_btag = @view evt.Jet_btagCSVV2[jet_pt_mask]
 
+                btag_count = count(>=(0.5), jet_btag)
                 # MASS HISTOGRAM
-                if count(>=(0.5), jet_btag) >= 2 # at least 2 btag
+                if btag_count >= 2 # at least 2 btag
+                    #=if hist_type == "nominal"
+                        push!(evts, evt.event)
+                    end=#
+
                     (; Jet_eta, Jet_phi, Jet_mass) = evt
 
                     # construct jet lorentz vector
@@ -160,10 +166,8 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
                             push!(hists["btag_var_$(k)_down"]["4j2b"], best_mass, btag_var_down[k+1]*wgt)
                         end
                     end
-                end
-
                 # HT HISTOGRAM
-                if count(>=(0.5), jet_btag) == 1 # no more than 1 btag
+                elseif btag_count == 1 # no more than 1 btag
                     HT = @views sum(Jet_pt[jet_pt_mask])
                     push!(hists[hist_type]["4j1b"], HT, wgt)
                     if hist_type == "nominal"
@@ -180,5 +184,5 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
         end
     end
 
-    hists
+    hists#, evts
 end
