@@ -20,9 +20,11 @@ function get_histo(process_tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_
 end
 
 """
-    get_histo(tree, wgt; nbins=26, start=0, stop=375)
+    get_histo(tree, wgt; nbins=26, start=0, stop=375, evts::AbstractDict=nothing)
+
+    `evts` is used to track the events processed for each histogram type and should be a dictionary of the format histogram_type => Vector{Int}. the dictionary gets changed and is not returned.
 """
-function get_histo(tree, wgt; nbins=26, start=0, stop=375)
+function get_histo(tree, wgt; nbins=26, start=0, stop=375, evts::AbstractDict=nothing)
     hists = Dict(
         "nominal" => Dict(
             "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nbins)),
@@ -101,7 +103,6 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
         "pt_res" => jet_pt_resolution
     )
     
-    #evts = Int[]
     for evt in tree
         # single lepton requirement
         (; Electron_pt, Muon_pt) = evt
@@ -123,9 +124,11 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
                 btag_count = count(>=(0.5), jet_btag)
                 # MASS HISTOGRAM
                 if btag_count >= 2 # at least 2 btag
-                    #=if hist_type == "nominal"
-                        push!(evts, evt.event)
-                    end=#
+                    if evts !== nothing
+                        if hist_type in keys(evts)
+                            push!(evts[hist_type], evt.event)
+                        end
+                    end
 
                     (; Jet_eta, Jet_phi, Jet_mass) = evt
 
@@ -184,5 +187,5 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
         end
     end
 
-    hists#, evts
+    hists
 end
