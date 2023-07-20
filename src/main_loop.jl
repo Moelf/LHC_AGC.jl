@@ -121,7 +121,7 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375, evts::AbstractDict=no
             if count(jet_pt_mask) >= 4
                 jet_btag = @view evt.Jet_btagCSVV2[jet_pt_mask]
 
-                btag_count = count(>=(0.5), jet_btag)
+                btag_count = count(>(0.5), jet_btag)
                 # MASS HISTOGRAM
                 if btag_count >= 2 # at least 2 btag
                     if evts !== nothing
@@ -148,7 +148,7 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375, evts::AbstractDict=no
                         p4s = @view jet_p4[comb]
                         btags = @view jet_btag[comb]
                         # 2. keep those maximum(btags1,2,3) > 0.5
-                        maximum(btags) < 0.5 && continue
+                        maximum(btags) <= 0.5 && continue
                         tri = sum(p4s)
                         _pt = pt(tri)
                         # 3. pick the tri-p4 with highest tri-pt
