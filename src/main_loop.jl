@@ -1,3 +1,6 @@
+"""
+    get_histo(process_tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[], nbins=26, start=0, stop=375)
+"""
 function get_histo(process_tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[], nbins=26, start=0, stop=375)
     N = n_files_max_per_sample
     if iszero(wgt)
@@ -11,32 +14,84 @@ function get_histo(process_tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_
         get_histo(tree, wgt; start=start, stop=stop, nbins=nbins)
     end
     h_nom = hists["nominal"]
-    hists["luminocity_up"] = Dict(k => h_nom[k]*1.03 for k in keys(h_nom))
-    hists["luminocity_down"] = Dict(k => h_nom[k]*0.97 for k in keys(h_nom))
+    hists["luminosity_up"] = Dict(k => h_nom[k]*1.03 for k in keys(h_nom))
+    hists["luminosity_down"] = Dict(k => h_nom[k]*0.97 for k in keys(h_nom))
     hists
 end
 
 """
-    get_histo(tree, wgt; nbins=26, start=0, stop=375)
+    get_histo(tree, wgt; nbins=26, start=0, stop=375, evts::AbstractDict=nothing)
+
+    `evts` is used to track the events processed for each histogram type and should be a dictionary of the format histogram_type => Vector{Int}. the dictionary gets changed and is not returned.
 """
-function get_histo(tree, wgt; nbins=26, start=0, stop=375)
+function get_histo(tree, wgt; nbins=26, start=0, stop=375, evts::AbstractDict=nothing)
     hists = Dict(
         "nominal" => Dict(
-            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
-            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+            "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start, stop, length=nbins))
         ),
 
         "pt_scale_up" => Dict(
-            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
-            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+            "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start, stop, length=nbins))
         ),
 
         "pt_scale_down" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start, stop, length=nbins))
+        ),
+
+        "pt_res" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start, stop, length=nbins))
+        ),
+
+        "scale_var_up" => Dict(
             "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
             "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
         ),
 
-        "pt_res" => Dict(
+        "scale_var_down" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_0_up" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_0_down" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_1_up" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_1_down" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_2_up" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_2_down" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_3_up" => Dict(
+            "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
+            "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
+        ),
+
+        "btag_var_3_down" => Dict(
             "4j2b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins)),
             "4j1b" => Hist1D(Float64; bins = range(; start=start, stop=stop, length=nbins))
         ),
@@ -57,7 +112,7 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
         (; Jet_pt) = evt
         Jet_pt_nominal = Jet_pt
 
-        for hist_type in keys(hists)
+        for hist_type in keys(pt_var)
             # modify pt
             Jet_pt = pt_var[hist_type].(Jet_pt_nominal)
 
@@ -66,8 +121,15 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
             if count(jet_pt_mask) >= 4
                 jet_btag = @view evt.Jet_btagCSVV2[jet_pt_mask]
 
+                btag_count = count(>(0.5), jet_btag)
                 # MASS HISTOGRAM
-                if count(>=(0.5), jet_btag) >= 2 # at least 2 btag
+                if btag_count >= 2 # at least 2 btag
+                    if evts !== nothing
+                        if hist_type in keys(evts)
+                            push!(evts[hist_type], evt.event)
+                        end
+                    end
+
                     (; Jet_eta, Jet_phi, Jet_mass) = evt
 
                     # construct jet lorentz vector
@@ -86,7 +148,7 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
                         p4s = @view jet_p4[comb]
                         btags = @view jet_btag[comb]
                         # 2. keep those maximum(btags1,2,3) > 0.5
-                        maximum(btags) < 0.5 && continue
+                        maximum(btags) <= 0.5 && continue
                         tri = sum(p4s)
                         _pt = pt(tri)
                         # 3. pick the tri-p4 with highest tri-pt
@@ -98,12 +160,28 @@ function get_histo(tree, wgt; nbins=26, start=0, stop=375)
 
                     # tri-p4 with highest tri-pt first
                     push!(hists[hist_type]["4j2b"], best_mass, wgt)
-                end
-
+                    if hist_type == "nominal"
+                        push!(hists["scale_var_up"]["4j2b"], best_mass, 1.025f0*wgt)
+                        push!(hists["scale_var_down"]["4j2b"], best_mass, 0.975f0*wgt)
+                        btag_var_up, btag_var_down = btag_weight_variation(Jet_pt[1:4])
+                        for k in 0:3
+                            push!(hists["btag_var_$(k)_up"]["4j2b"], best_mass, btag_var_up[k+1]*wgt)
+                            push!(hists["btag_var_$(k)_down"]["4j2b"], best_mass, btag_var_down[k+1]*wgt)
+                        end
+                    end
                 # HT HISTOGRAM
-                if count(>=(0.5), jet_btag) == 1 # no more than 1 btag
+                elseif btag_count == 1 # no more than 1 btag
                     HT = @views sum(Jet_pt[jet_pt_mask])
                     push!(hists[hist_type]["4j1b"], HT, wgt)
+                    if hist_type == "nominal"
+                        push!(hists["scale_var_up"]["4j1b"], HT, 1.025f0*wgt)
+                        push!(hists["scale_var_down"]["4j1b"], HT, 0.975f0*wgt)
+                        btag_var_up, btag_var_down = btag_weight_variation(Jet_pt[1:4])
+                        for k in 0:3
+                            push!(hists["btag_var_$(k)_up"]["4j1b"], HT, btag_var_up[k+1]*wgt)
+                            push!(hists["btag_var_$(k)_down"]["4j1b"], HT, btag_var_down[k+1]*wgt)
+                        end
+                    end
                 end
             end
         end
