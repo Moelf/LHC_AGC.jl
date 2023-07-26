@@ -6,8 +6,8 @@ using Combinatorics: Combinations
 using Distributions
 
 include("constants.jl")
-include("main_loop.jl")
 include("syst_utils.jl")
+include("main_loop.jl")
 
 function nevts_total(process_tag, variation=:nominal)
     NJSON[process_tag][variation][:nevts_total]

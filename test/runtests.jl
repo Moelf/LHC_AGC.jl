@@ -4,7 +4,7 @@ using Test, UnROOT, FHist
 function load_coffea_events(hist_type)
     coffea_evts = Int[]
 
-    open("processed_coffea_"*hist_type, "r") do f
+    open("processed_coffea_"*String(hist_type), "r") do f
         for l in readlines(f)
             push!(coffea_evts, parse(Int, l))
         end
@@ -19,7 +19,7 @@ A function for test comparison
 function AGC_quicktest(filepath, _bincounts, wgt; eps=0.01)
     tt_tree = LazyTree(filepath, "Events")
     evts = Dict(k => Int[] for k in keys(_bincounts))
-    res = LHC_AGC.get_histo(tt_tree, wgt; nbins=26, start=50, stop=550, evts=evts)
+    res = LHC_AGC.get_histo(tt_tree, wgt; evts=evts)
 
     for hist_type in keys(_bincounts)
         # test bincounts
@@ -49,7 +49,7 @@ end
         "data/cmsopendata2015_ttbar_19981_PU25nsData2015v1_76X_mcRun2_asymptotic_v12_ext4-v1_80000_0007.root",
 
         Dict(
-            "nominal" => Dict( 
+            :nominal => Dict( 
                 "4j1b" => [ 0.,    0.,    0.,   10.,   71.,  256.,  568.,  978., 1253.,
                             1489., 1700., 1684., 1718., 1627., 1452., 1341., 1161., 1115.,
                             977.,  808.,  671.,  620.,  473.,  428.,  388.],
@@ -57,7 +57,7 @@ end
                             2401., 1895., 1562., 1354., 1098.,  949.,  825.,  686.,  624.,
                             535.,  468.,  463.,  392.,  358.,  315.,  285.]
             ),
-            "pt_scale_up" => Dict( 
+            :pt_scale_up => Dict( 
                 "4j1b" => [ 0.,    0.,    0.,    7.,   60.,  185.,  461.,  831., 1102.,
                             1379., 1595., 1608., 1702., 1661., 1482., 1375., 1221., 1131.,
                             1028.,  871.,  736.,  660.,  551.,  477.,  396.],
@@ -77,7 +77,7 @@ end
         res,
 
         Dict(
-            "btag_var_0_up" => Dict( 
+            :btag_var_0_up => Dict( 
                 "4j1b" => [ 0.        ,    0.        ,    0.        ,   10.59873437,
                             76.028     ,  277.56775003,  622.17878134, 1082.2217344 ,
                             1398.25474995, 1675.03745329, 1928.10035937, 1922.50023447,
@@ -93,7 +93,7 @@ end
                             576.48690625,  495.98346875,  444.51517188,  391.0558125 ,
                             362.30765625]
             ),
-            "btag_var_1_up" => Dict( 
+            :btag_var_1_up => Dict( 
                 "4j1b" => [ 0.        ,    0.        ,    0.        ,   10.46457812,
                             74.84644533,  271.89008596,  607.97017187, 1053.09464075,
                             1357.95214067, 1623.34060946, 1864.53940638, 1856.67709394,
@@ -109,7 +109,7 @@ end
                             540.5395    ,  461.30384375,  417.65064062,  366.9429375 ,
                             337.039875  ]
             ),
-            "btag_var_0_down" => Dict( 
+            :btag_var_0_down => Dict( 
                 "4j1b" => [  0.        ,    0.        ,    0.        ,    9.40126563,
                             65.972     ,  234.43224997,  513.82121866,  873.7782656 ,
                             1107.74525005, 1302.96254671, 1471.89964063, 1445.49976553,
@@ -125,7 +125,7 @@ end
                             349.51309375,  288.01653125,  271.48482812,  238.9441875 ,
                             207.69234375]
             ),
-            "btag_var_1_down" => Dict( 
+            :btag_var_1_down => Dict( 
                 "4j1b" => [ 0.        ,    0.        ,    0.        ,    9.53542188,
                             67.15355467,  240.10991404,  528.02982813,  902.90535925,
                             1148.04785933, 1354.65939054, 1535.46059362, 1511.32290606,
