@@ -100,11 +100,7 @@ function get_histo(tree, wgt; evts::AbstractDict=nothing)
                     # tri-p4 with highest tri-pt first
                     push!(hists[hist_type]["4j2b"], best_mass, wgt)
                     if hist_type == :nominal
-                        for scale_name in keys(SCALE_VARS)
-                            up, down = SCALE_VARS[scale_name](scale_info)
-                            push!(hists[Symbol(scale_name, :_up)]["4j2b"], best_mass, up*wgt)
-                            push!(hists[Symbol(scale_name, :_down)]["4j2b"], best_mass, down*wgt)
-                        end
+                        @scale_var_loop "4j2b" best_mass
                     end
                 # HT HISTOGRAM
                 elseif btag_count == 1 # no more than 1 btag
@@ -112,11 +108,6 @@ function get_histo(tree, wgt; evts::AbstractDict=nothing)
                     push!(hists[hist_type]["4j1b"], HT, wgt)
                     if hist_type == :nominal
                         @scale_var_loop "4j1b" HT
-                        # for scale_name in keys(SCALE_VARS)
-                        #     up, down = SCALE_VARS[scale_name](scale_info)
-                        #     push!(hists[Symbol(scale_name, :_up)]["4j1b"], HT, up*wgt)
-                        #     push!(hists[Symbol(scale_name, :_down)]["4j1b"], HT, down*wgt)
-                        # end
                     end
                 end
             end
