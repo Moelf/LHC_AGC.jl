@@ -25,14 +25,18 @@ const SHAPE_VARS = (
 )
 
 macro scale_var_loop(region, phys_var)
-    exs = quote
-        for scale_name in keys(SCALE_VARS)
-            up, down = SCALE_VARS[scale_name](scale_info)
-            push!(hists[Symbol(scale_name, :_up)][$region], $phys_var, up*wgt)
-            push!(hists[Symbol(scale_name, :_down)][$region], $phys_var, down*wgt)
+    exs = Expr[]
+    for scale_name in keys(SCALE_VARS)
+        sym = QuoteNode(scale_name)
+        ex = quote
+            up, down = SCALE_VARS[$sym](scale_info)
+            push!(hists[Symbol($sym, :_up)][$region], $phys_var, up*wgt)
+            push!(hists[Symbol($sym, :_down)][$region], $phys_var, down*wgt)
         end
+
+        push!(exs, ex)
     end
 
-    esc(exs)
+    esc(Expr(:block, exs...))
 end
 
