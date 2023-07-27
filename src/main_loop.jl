@@ -16,48 +16,22 @@ function get_histo(process_tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_
     hists
 end
 
-const SYSTEMATICS_NAMES = (
-    :nominal,
-    :pt_scale_up,
-    :pt_scale_down,
-    :pt_res,
-    :scale_var_up,
-    :scale_var_down,
-    :btag_var_0_up,
-    :btag_var_0_down,
-    :btag_var_1_up,
-    :btag_var_1_down,
-    :btag_var_2_up,
-    :btag_var_2_down,
-    :btag_var_3_up,
-    :btag_var_3_down,
-)
-
-macro fill_dict!(dict, func, vars)
-    vs = unique(vars.args)
-    exs = [Expr(:call, func, Expr(:ref, dict, QuoteNode(v)), v) for v in vs]
-    esc(Expr(:block, exs...))
-end
-
 function generate_hists()
     nbins=26
     start=50
     stop=550
+
+    scale_base = keys(SCALE_VARS)
+    scale_names = map(splat(Symbol), Iterators.product(scale_base, (:_up, :_down)))
     hists = Dict(k => Dict(
             "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nbins)),
             "4j1b" => Hist1D(Float64; bins = range(; start, stop, length=nbins))
             )
-            for k in SYSTEMATICS_NAMES
+            for k in (keys(SHAPE_VARS)..., scale_names...)
         )
     return hists
 end
 
-const pt_var = (
-    nominal = identity,
-    pt_scale_up = (pt)->1.03f0 * pt,
-    pt_scale_down = (pt)->0.97f0 * pt,
-    pt_res = jet_pt_resolution
-)
 
 """
     get_histo(tree, wgt; evts::AbstractDict=nothing)
@@ -75,9 +49,11 @@ function get_histo(tree, wgt; evts::AbstractDict=nothing)
         (; Jet_pt) = evt
         Jet_pt_nominal = Jet_pt
 
-        for hist_type in keys(pt_var)
+        for hist_type in keys(SHAPE_VARS)
             # modify pt
-            Jet_pt = pt_var[hist_type].(Jet_pt_nominal)
+            Jet_pt = SHAPE_VARS[hist_type].(Jet_pt_nominal)
+
+            scale_info = (; Jet_pt, wgt)
 
             # at least 4 jets
             jet_pt_mask = Jet_pt .> 25
@@ -124,12 +100,10 @@ function get_histo(tree, wgt; evts::AbstractDict=nothing)
                     # tri-p4 with highest tri-pt first
                     push!(hists[hist_type]["4j2b"], best_mass, wgt)
                     if hist_type == :nominal
-                        push!(hists[:scale_var_up]["4j2b"], best_mass, 1.025f0*wgt)
-                        push!(hists[:scale_var_down]["4j2b"], best_mass, 0.975f0*wgt)
-                        btag_var_up, btag_var_down = btag_weight_variation(Jet_pt[1:4])
-                        for k in 0:3
-                            push!(hists[Symbol(:btag_var_,k,:_up)]["4j2b"], best_mass, btag_var_up[k+1]*wgt)
-                            push!(hists[Symbol(:btag_var_,k,:_down)]["4j2b"], best_mass, btag_var_down[k+1]*wgt)
+                        for scale_name in keys(SCALE_VARS)
+                            up, down = SCALE_VARS[scale_name](scale_info)
+                            push!(hists[Symbol(scale_name, :_up)]["4j2b"], best_mass, up*wgt)
+                            push!(hists[Symbol(scale_name, :_down)]["4j2b"], best_mass, down*wgt)
                         end
                     end
                 # HT HISTOGRAM
@@ -137,13 +111,12 @@ function get_histo(tree, wgt; evts::AbstractDict=nothing)
                     HT = @views sum(Jet_pt[jet_pt_mask])
                     push!(hists[hist_type]["4j1b"], HT, wgt)
                     if hist_type == :nominal
-                        push!(hists[:scale_var_up]["4j1b"], HT, 1.025f0*wgt)
-                        push!(hists[:scale_var_down]["4j1b"], HT, 0.975f0*wgt)
-                        btag_var_up, btag_var_down = btag_weight_variation(Jet_pt[1:4])
-                        for k in 0:3
-                            push!(hists[Symbol(:btag_var_,k,:_up)]["4j1b"], HT, btag_var_up[k+1]*wgt)
-                            push!(hists[Symbol(:btag_var_,k,:_down)]["4j1b"], HT, btag_var_down[k+1]*wgt)
-                        end
+                        @scale_var_loop "4j1b" HT
+                        # for scale_name in keys(SCALE_VARS)
+                        #     up, down = SCALE_VARS[scale_name](scale_info)
+                        #     push!(hists[Symbol(scale_name, :_up)]["4j1b"], HT, up*wgt)
+                        #     push!(hists[Symbol(scale_name, :_down)]["4j1b"], HT, down*wgt)
+                        # end
                     end
                 end
             end
