@@ -1,56 +1,55 @@
 """
     get_histo(process_tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
 """
-function get_histo(process_tag::Symbol; variation_tag::Symbol=:nominal, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+function get_histo(process_tag::Symbol; variation_tags=[:nominal], wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
     N = n_files_max_per_sample
     if iszero(wgt)
         wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
     end
-    fs = @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]
-    println(fs)
-    hists = mapreduce(mergewith(mergewith(+)), fs) do path #
-        println(path)
-        tree = LazyTree(path, "Events")
-        println(length(tree))
-        get_histo(tree, wgt)
-    end
-    hists
+    all_hists = Dict(
+        variation_tag => mapreduce(mergewith(mergewith(+)), @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]) do path 
+            println(path)
+            tree = LazyTree(path, "Events")
+            println(length(tree))
+            get_histo(tree, wgt, is_nominal_file=(variation_tag==:nominal))
+        end for variation_tag in variation_tags
+    )
+    all_hists
 end
 
 function generate_hists()
-    nbins=26
+    nedges=26 #25 bins
     start=50
     stop=550
 
     scale_base = keys(SCALE_VARS)
     scale_names = map(splat(Symbol), Iterators.product(scale_base, (:_up, :_down)))
     hists = Dict(k => Dict(
-            "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nbins)),
-            "4j1b" => Hist1D(Float64; bins = range(; start, stop, length=nbins))
+            "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nedges)),
+            "4j1b" => Hist1D(Float64; bins = range(; start, stop, length=nedges))
             )
             for k in (keys(SHAPE_VARS)..., scale_names...)
         )
     return hists
 end
 
-
 """
     get_histo(tree, wgt; evts=nothing)
 
     `evts` is used to track the events processed for each histogram type and should be a dictionary of the format histogram_type => Vector{Int}. the dictionary gets mutated and is not returned.
 """
-function get_histo(tree, wgt; evts=nothing)
+function get_histo(tree, wgt; is_nominal_file=true, evts=nothing)
     hists = generate_hists()
-    for evt in tree
+    Threads.@threads for evt in tree
         # single lepton requirement
         (; Electron_pt, Muon_pt) = evt
         (count(>(25), Electron_pt) + count(>(25), Muon_pt) != 1) && continue
 
         # get pt
         (; Jet_pt) = evt
-        Jet_pt_nominal = Jet_pt
+        is_nominal_file && (Jet_pt_nominal = Jet_pt)
 
-        for hist_type in keys(SHAPE_VARS)
+        for hist_type in (is_nominal_file ? keys(SHAPE_VARS) : (:nominal,))
             # modify pt
             Jet_pt = SHAPE_VARS[hist_type].(Jet_pt_nominal)
 
@@ -100,14 +99,14 @@ function get_histo(tree, wgt; evts=nothing)
 
                     # tri-p4 with highest tri-pt first
                     push!(hists[hist_type]["4j2b"], best_mass, wgt)
-                    if hist_type == :nominal
+                    if is_nominal_file && (hist_type == :nominal)
                         @scale_var_loop "4j2b" best_mass
                     end
                 # HT HISTOGRAM
                 elseif btag_count == 1 # no more than 1 btag
                     HT = @views sum(Jet_pt[jet_pt_mask])
                     push!(hists[hist_type]["4j1b"], HT, wgt)
-                    if hist_type == :nominal
+                    if is_nominal_file && (hist_type == :nominal)
                         @scale_var_loop "4j1b" HT
                     end
                 end
