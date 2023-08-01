@@ -1,16 +1,17 @@
 """
     get_histo(process_tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
 """
-function get_histo(process_tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+function get_histo(process_tag::Symbol; variation_tag::Symbol=:nominal, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
     N = n_files_max_per_sample
     if iszero(wgt)
         wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
     end
-    fs = @view TAG_PATH_DICT[process_tag][begin:N]
+    fs = @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]
     println(fs)
     hists = mapreduce(mergewith(mergewith(+)), fs) do path #
         println(path)
         tree = LazyTree(path, "Events")
+        println(length(tree))
         get_histo(tree, wgt)
     end
     hists
@@ -34,11 +35,11 @@ end
 
 
 """
-    get_histo(tree, wgt; evts::AbstractDict=nothing)
+    get_histo(tree, wgt; evts=nothing)
 
-    `evts` is used to track the events processed for each histogram type and should be a dictionary of the format histogram_type => Vector{Int}. the dictionary gets changed and is not returned.
+    `evts` is used to track the events processed for each histogram type and should be a dictionary of the format histogram_type => Vector{Int}. the dictionary gets mutated and is not returned.
 """
-function get_histo(tree, wgt; evts::AbstractDict=nothing)
+function get_histo(tree, wgt; evts=nothing)
     hists = generate_hists()
     for evt in tree
         # single lepton requirement
