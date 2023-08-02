@@ -30,8 +30,8 @@ macro scale_var_loop(region, phys_var)
         sym = QuoteNode(scale_name)
         ex = quote
             up, down = SCALE_VARS[$sym](scale_info)
-            push!(hists[Symbol($sym, :_up)][$region], $phys_var, up*wgt)
-            push!(hists[Symbol($sym, :_down)][$region], $phys_var, down*wgt)
+            push!(hists[Symbol($sym, :_up, $region)], $phys_var, up*wgt)
+            push!(hists[Symbol($sym, :_down, $region)], $phys_var, down*wgt)
         end
 
         push!(exs, ex)
