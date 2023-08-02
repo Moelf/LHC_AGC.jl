@@ -29,10 +29,10 @@ function generate_hists(file_variation::Symbol)
 
     hists = merge(
         Dict(
-            Symbol(k, :_4j2b) => Hist1D(Float64; bins = range(; start, stop, length=nedges)) for k in all_keys
+            Symbol(:mbjj_4j2b_, k) => Hist1D(Float64; bins = range(; start, stop, length=nedges)) for k in all_keys
         ),
         Dict(
-            Symbol(k, :_4j1b) => Hist1D(Float64; bins = range(; start, stop, length=nedges)) for k in all_keys
+            Symbol(:HT_4j1b_, k) => Hist1D(Float64; bins = range(; start, stop, length=nedges)) for k in all_keys
         )
     )
     return hists
@@ -104,16 +104,16 @@ function get_histo(tree, wgt; file_variation::Symbol=:nominal, evts=nothing)
                     end
 
                     # tri-p4 with highest tri-pt first
-                    push!(hists[Symbol((is_nominal_file ? hist_type : file_variation), :_4j2b)], best_mass, wgt)
+                    push!(hists[Symbol(:mbjj_4j2b_, (is_nominal_file ? hist_type : file_variation))], best_mass, wgt)
                     if is_nominal_file && (hist_type == :nominal)
-                        @scale_var_loop :_4j2b best_mass
+                        @scale_var_loop :mbjj_4j2b best_mass
                     end
                 # HT HISTOGRAM
                 elseif btag_count == 1 # no more than 1 btag
                     HT = @views sum(Jet_pt[jet_pt_mask])
-                    push!(hists[Symbol((is_nominal_file ? hist_type : file_variation), :_4j1b)], HT, wgt)
+                    push!(hists[Symbol(:HT_4j1b_, (is_nominal_file ? hist_type : file_variation))], HT, wgt)
                     if is_nominal_file && (hist_type == :nominal)
-                        @scale_var_loop :_4j1b HT
+                        @scale_var_loop :HT_4j1b HT
                     end
                 end
             end
