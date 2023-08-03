@@ -1,7 +1,7 @@
 """
-    get_histo(process_tag::Symbol; variation_tags=[:nominal], wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+    get_histo(process_tag::Symbol; file_variation_tags=[:nominal], wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
 """
-function get_histo(process_tag::Symbol; variation_tags=[:nominal], wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+function get_histo(process_tag::Symbol; file_variation_tags=[:nominal], wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
     N = n_files_max_per_sample
     if iszero(wgt)
         wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
@@ -10,7 +10,7 @@ function get_histo(process_tag::Symbol; variation_tags=[:nominal], wgt = 0.0, n_
         mapreduce(mergewith(+), @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]) do path 
             println(path)
             get_histo(LazyTree(path, "Events"), wgt, file_variation=variation_tag)
-        end for variation_tag in variation_tags
+        end for variation_tag in file_variation_tags
     ])
     all_hists
 end

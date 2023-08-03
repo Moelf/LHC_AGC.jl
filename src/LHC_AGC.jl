@@ -8,6 +8,7 @@ using Distributions
 include("constants.jl")
 include("syst_utils.jl")
 include("main_loop.jl")
+include("visuals.jl")
 
 function nevts_total(process_tag, variation=:nominal)
     NJSON[process_tag][variation][:nevts_total]
