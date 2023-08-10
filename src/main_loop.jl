@@ -7,12 +7,34 @@ function get_histo(process_tag::Symbol; file_variation_tags=[:nominal], wgt = 0.
         wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
     end
     all_hists = reduce(merge, [
-        mapreduce(mergewith(+), @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]) do path 
-            println(path)
+        mapreduce(mergewith(+), @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]) do path
             get_histo(LazyTree(path, "Events"), wgt, file_variation=variation_tag)
         end for variation_tag in file_variation_tags
     ])
     all_hists
+end
+
+"""
+    get_histo_distributed(process_tag::Symbol, pmap::Function; file_variation_tags=[:nominal], wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+"""
+function get_histo_distributed(process_tag::Symbol, pmap::Function; file_variation_tags=[:nominal], wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+    N = n_files_max_per_sample
+    if iszero(wgt)
+        wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
+    end
+
+    files = Vector{Tuple{String, Symbol}}[]
+    for variation_tag in file_variation_tags
+        push!(files, Tuple{String, Symbol}[(path, variation_tag) for path in @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]])
+    end
+
+    mainloop = function (tuple)
+        path, variation_tag = tuple
+        get_histo(LazyTree(path, "Events"), wgt,file_variation=variation_tag)
+    end
+    dicts = [pmap(mainloop, file_pack) for file_pack in files]
+
+    return reduce(merge, reduce.(mergewith(+), dicts))
 end
 
 function generate_hists(file_variation::Symbol)
