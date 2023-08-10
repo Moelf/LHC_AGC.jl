@@ -2,7 +2,7 @@
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "cf7281c432bdbf74a6e9df4f10604c00b64ac252"
+project_hash = "c5ae1c70a281d27e3b1000f705b30462c3a49c1b"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -140,6 +140,12 @@ deps = ["Compat", "LinearAlgebra", "SparseArrays"]
 git-tree-sha1 = "e30f2f4e20f7f186dc36529910beaedc60cfa644"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 version = "1.16.0"
+
+[[deps.ClusterManagers]]
+deps = ["Distributed", "Logging", "Pkg", "Sockets"]
+git-tree-sha1 = "245a2bb9a98e18611dde824f04bef6f5e04d7a6b"
+uuid = "34f1f09b-3a8b-5176-ab39-66d58a4d544e"
+version = "0.4.5"
 
 [[deps.CodeTracking]]
 deps = ["InteractiveUtils", "UUIDs"]

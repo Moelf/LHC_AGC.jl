@@ -10,5 +10,5 @@ const NJSON = joinpath(dirname(@__DIR__), "ntuples_nanoaod.json") |> read |> JSO
 const TAGS = keys(NJSON)
 
 const BASE_PATH = Ref(joinpath(dirname(@__DIR__), "data"))
-const MAX_N_FILES_PER_SAMPLE = Ref(1)
+const MAX_N_FILES_PER_SAMPLE = Ref(2)
 const LUMI = 3378.0 # /pb

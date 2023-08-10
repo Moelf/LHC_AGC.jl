@@ -24,14 +24,14 @@ const SHAPE_VARS = (
     pt_res = jet_pt_resolution
 )
 
-macro scale_var_loop(region, phys_var)
+macro scale_var_loop(phyvar_and_region, phys_var)
     exs = Expr[]
     for scale_name in keys(SCALE_VARS)
         sym = QuoteNode(scale_name)
         ex = quote
             up, down = SCALE_VARS[$sym](scale_info)
-            push!(hists[Symbol($sym, :_up)][$region], $phys_var, up*wgt)
-            push!(hists[Symbol($sym, :_down)][$region], $phys_var, down*wgt)
+            push!(hists[Symbol($phyvar_and_region, :_, $sym, :_up)], $phys_var, up*wgt)
+            push!(hists[Symbol($phyvar_and_region, :_, $sym, :_down)], $phys_var, down*wgt)
         end
 
         push!(exs, ex)

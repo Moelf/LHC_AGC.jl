@@ -1,57 +1,85 @@
 """
-    get_histo(process_tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+    get_histo(process_tag::Symbol; file_variation_tags=[:nominal], wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
 """
-function get_histo(process_tag::Symbol; wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+function get_histo(process_tag::Symbol; file_variation_tags=[:nominal], wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
     N = n_files_max_per_sample
     if iszero(wgt)
         wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
     end
-    fs = @view TAG_PATH_DICT[process_tag][begin:N]
-    println(fs)
-    hists = mapreduce(mergewith(mergewith(+)), fs) do path #
-        println(path)
-        tree = LazyTree(path, "Events")
-        get_histo(tree, wgt)
-    end
-    hists
+    all_hists = reduce(merge, [
+        mapreduce(mergewith(+), @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]) do path
+            get_histo(LazyTree(path, "Events"), wgt, file_variation=variation_tag)
+        end for variation_tag in file_variation_tags
+    ])
+    all_hists
 end
 
-function generate_hists()
-    nbins=26
+"""
+    get_histo_distributed(process_tag::Symbol, pmap::Function; file_variation_tags=[:nominal], wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+"""
+function get_histo_distributed(process_tag::Symbol, pmap::Function; file_variation_tags=[:nominal], wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+    N = n_files_max_per_sample
+    if iszero(wgt)
+        wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
+    end
+
+    files = Vector{Tuple{String, Symbol}}[]
+    for variation_tag in file_variation_tags
+        push!(files, Tuple{String, Symbol}[(path, variation_tag) for path in @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]])
+    end
+
+    mainloop = function (tuple)
+        path, variation_tag = tuple
+        get_histo(LazyTree(path, "Events"), wgt,file_variation=variation_tag)
+    end
+    dicts = [pmap(mainloop, file_pack) for file_pack in files]
+
+    return reduce(merge, reduce.(mergewith(+), dicts))
+end
+
+function generate_hists(file_variation::Symbol)
+    nedges=26 #25 bins
     start=50
     stop=550
 
-    scale_base = keys(SCALE_VARS)
-    scale_names = map(splat(Symbol), Iterators.product(scale_base, (:_up, :_down)))
-    hists = Dict(k => Dict(
-            "4j2b" => Hist1D(Float64; bins = range(; start, stop, length=nbins)),
-            "4j1b" => Hist1D(Float64; bins = range(; start, stop, length=nbins))
-            )
-            for k in (keys(SHAPE_VARS)..., scale_names...)
+    all_keys = (file_variation,)
+    if file_variation == :nominal
+        scale_base = keys(SCALE_VARS)
+        scale_names = map(splat(Symbol), Iterators.product(scale_base, (:_up, :_down)))
+        all_keys = (keys(SHAPE_VARS)..., scale_names...)
+    end
+
+    hists = merge(
+        Dict(
+            Symbol(:mbjj_4j2b_, k) => Hist1D(Float64; bins = range(; start, stop, length=nedges)) for k in all_keys
+        ),
+        Dict(
+            Symbol(:HT_4j1b_, k) => Hist1D(Float64; bins = range(; start, stop, length=nedges)) for k in all_keys
         )
+    )
     return hists
 end
 
-
 """
-    get_histo(tree, wgt; evts::AbstractDict=nothing)
+    get_histo(tree, wgt; file_variation::Symbol=:nominal, evts=nothing)
 
-    `evts` is used to track the events processed for each histogram type and should be a dictionary of the format histogram_type => Vector{Int}. the dictionary gets changed and is not returned.
+    `evts` is used to track the events processed for each histogram type and should be a dictionary of the format histogram_type => Vector{Int}. the dictionary gets mutated and is not returned.
 """
-function get_histo(tree, wgt; evts::AbstractDict=nothing)
-    hists = generate_hists()
-    for evt in tree
+function get_histo(tree, wgt; file_variation::Symbol=:nominal, evts=nothing)
+    is_nominal_file = (:nominal == file_variation)
+    hists = generate_hists(file_variation)
+    Threads.@threads for evt in tree
         # single lepton requirement
         (; Electron_pt, Muon_pt) = evt
         (count(>(25), Electron_pt) + count(>(25), Muon_pt) != 1) && continue
 
         # get pt
         (; Jet_pt) = evt
-        Jet_pt_nominal = Jet_pt
+        is_nominal_file && (Jet_pt_nominal = Jet_pt)
 
-        for hist_type in keys(SHAPE_VARS)
+        for hist_type in (is_nominal_file ? keys(SHAPE_VARS) : (:nominal,))
             # modify pt
-            Jet_pt = SHAPE_VARS[hist_type].(Jet_pt_nominal)
+            is_nominal_file && (Jet_pt = SHAPE_VARS[hist_type].(Jet_pt_nominal))
 
             scale_info = (; Jet_pt, wgt)
 
@@ -98,16 +126,16 @@ function get_histo(tree, wgt; evts::AbstractDict=nothing)
                     end
 
                     # tri-p4 with highest tri-pt first
-                    push!(hists[hist_type]["4j2b"], best_mass, wgt)
-                    if hist_type == :nominal
-                        @scale_var_loop "4j2b" best_mass
+                    push!(hists[Symbol(:mbjj_4j2b_, (is_nominal_file ? hist_type : file_variation))], best_mass, wgt)
+                    if is_nominal_file && (hist_type == :nominal)
+                        @scale_var_loop :mbjj_4j2b best_mass
                     end
                 # HT HISTOGRAM
                 elseif btag_count == 1 # no more than 1 btag
                     HT = @views sum(Jet_pt[jet_pt_mask])
-                    push!(hists[hist_type]["4j1b"], HT, wgt)
-                    if hist_type == :nominal
-                        @scale_var_loop "4j1b" HT
+                    push!(hists[Symbol(:HT_4j1b_, (is_nominal_file ? hist_type : file_variation))], HT, wgt)
+                    if is_nominal_file && (hist_type == :nominal)
+                        @scale_var_loop :HT_4j1b HT
                     end
                 end
             end
