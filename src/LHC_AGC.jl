@@ -52,4 +52,97 @@ function download_data(N = MAX_N_FILES_PER_SAMPLE[]; process_tags = [:ttbar], va
     nothing
 end
 
+"""
+    generate_workspace_file(all_hists::Dict, filename, real_data; rebin2=true, systematics=false)::Dict
+
+
+Generates a workspace dictionary, writes it to a JSON file and returns
+
+
+`all_hists` should be a dictionary of the form evt_type => hists_dict, where hists_dict is what get_histo(evt_type, ...) would return.
+
+`real_data` should contain real data that we are going to put into `:observations` (essentially vectors of numbers). we put `real_data[1]` for `"4j1b CR"` and `real_data[2]` for `"4j2b SR"`.
+"""
+function generate_workspace_file(all_hists::Dict, filename, real_data; rebin2=true, systematics=false)::Dict
+    all_hists = (rebin2 ? Dict(evt_type => Dict(var => all_hists[evt_type][var] |> restrict(120, Inf) |> rebin(2) for var in (systematics ? keys(all_hists[evt_type]) : [:HT_4j1b_nominal, :mbjj_4j2b_nominal])) for evt_type in keys(all_hists)) : all_hists)
+
+    workspace = Dict(
+        :channels => [
+            Dict(
+                :name => "4j1b CR",
+                :samples => [
+                    Dict(
+                        :data => bincounts(all_hists[evt_type][:HT_4j1b_nominal]), 
+                        :modifiers => [ # systematics basically
+                            Dict(
+                                :data => binerrors(all_hists[evt_type][:HT_4j1b_nominal]),
+                                :name => "staterrors_4j1b-CR",
+                                :type => "staterror"
+                            ),
+                            Dict(
+                                :data => nothing,
+                                :name => "ttbar_norm",
+                                :type => "normfactor"
+                            )
+                        ], 
+                        :name => String(evt_type),
+                    ) for evt_type in keys(all_hists)
+                ]
+            ),
+            Dict(
+                :name => "4j2b SR",
+                :samples => [
+                    Dict(
+                        :data => bincounts(all_hists[evt_type][:mbjj_4j2b_nominal]),
+                        :modifiers => [ # systematics basically
+                            Dict(
+                                :data => binerrors(all_hists[evt_type][:mbjj_4j2b_nominal]),
+                                :name => "staterrors_4j2b-SR",
+                                :type => "staterror"
+                            )
+                        ], 
+                        :name => String(evt_type)
+                    ) for evt_type in keys(all_hists)
+                ]
+            )
+        ],
+        :measurements => [ # we leave it so for now
+            Dict(
+                :config => Dict(
+                    :parameters => [
+                        Dict(
+                            :bounds => [
+                                [0, 10] # allowed values
+                            ],
+                            :inits => [
+                                1.0 # initial value
+                            ],
+                            :name => "ttbar_norm"
+                        )
+                    ],
+                    :poi => "ttbar_norm"
+                ),
+                :name => "CMS_ttbar"
+            )
+        ],
+        :observations => [
+            Dict(
+                :name => "4j1b CR",
+                :data => real_data[1]
+            ),
+            Dict(
+                :name => "4j2b SR",
+                :data => real_data[2]
+            )
+        ],
+        :version => "1.0.0"
+    )
+
+    open(filename, "w") do f
+        JSON3.pretty(f, workspace)
+    end
+
+    workspace
+end
+
 end

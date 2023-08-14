@@ -3,8 +3,13 @@ using CairoMakie
 """
     plot_mbjj_4j2b_stack(all_hists; evt_types::Union{Nothing, Vector{Symbol}}=nothing, syst_variation::Symbol=:mbjj_4j2b_nominal, color=Makie.wong_colors())
 
-creates a plot for the stack of histograms in the 4j2b region for the mbjj variable.
+
+Creates a plot for the stack of histograms in the 4j2b region for the mbjj variable.
+
+
+`all_hists` should be a dictionary of the form evt_type => hists_dict, where hists_dict is what get_histo(evt_type, ...) would return.
 if `evt_types` is `nothing` `keys(all_hists)` are used instead.
+
 `color` should be a vector of colors of a meaningful size.
 """
 function plot_mbjj_4j2b_stack(all_hists; evt_types::Union{Nothing, Vector{Symbol}}=nothing, syst_variation::Symbol=:mbjj_4j2b_nominal, color=Makie.wong_colors())
@@ -27,7 +32,7 @@ end
 """
     plot_variation(hists, variable_region::Symbol, variations; color=Makie.wong_colors())
 
-usage example:
+Usage example:
     ```
     plot_variation(all_hists[:ttbar], :mbjj_4j2b, [:nominal, :pt_scale_down, :pt_scale_up, :pt_res])
     ```
