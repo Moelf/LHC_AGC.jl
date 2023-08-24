@@ -71,15 +71,9 @@ function generate_workspace_file(all_hists::DictT, filename, real_data; rebin2=t
         :mbjj_4j2b => "4j2b SR",
     )
 
+    norm_factors = Dict{Symbol, Dict{Symbol, Float64}}() # norm factors for hi
+
     if systematics
-        for evt_type in keys(all_hists)
-            for x in keys(region_names)
-                # symmetric reconstruction
-                for var in [:_ME_var, :_PS_var, :_pt_res]
-                    all_hists[evt_type][Symbol(x, var, :_sym)] = all_hists[evt_type][Symbol(x, :_nominal)]*3 - all_hists[evt_type][Symbol(x, var)]*2
-                end
-            end
-        end
         modifiers_dict = Dict(
             #Symbol("Luminosity") => (:_lumi_up, :_lumi_down),
             Symbol("ME variation") => (:_ME_var, :_ME_var_sym),
@@ -92,6 +86,21 @@ function generate_workspace_file(all_hists::DictT, filename, real_data; rebin2=t
             Symbol("b-tag NP 3") => (:_btag_var_2_up, :_btag_var_2_down),
             Symbol("b-tag NP 4") => (:_btag_var_3_up, :_btag_var_3_down),
         )
+        for evt_type in keys(all_hists)
+            norm_factors[evt_type] = Dict{Symbol, Float64}()
+            for x in keys(region_names)
+                # symmetric reconstruction of the _down
+                for (var, var_down) in values(modifiers_dict)
+                    norm = norm_factors[evt_type][Symbol(x, var)] = integral(all_hists[evt_type][Symbol(x, var)])/integral(all_hists[evt_type][Symbol(x, :_nominal)])
+                    all_hists[evt_type][Symbol(x, var)] = all_hists[evt_type][Symbol(x, var)]*(1. / norm) # normalise the up variation
+                    if var in [:_ME_var, :_PS_var, :_pt_res] # either reconstruction or normalisation of the down variation
+                        all_hists[evt_type][Symbol(x, var_down)] = all_hists[evt_type][Symbol(x, :_nominal)]*2 - all_hists[evt_type][Symbol(x, var)]
+                    else
+                        all_hists[evt_type][Symbol(x, var_down)] = all_hists[evt_type][Symbol(x, var_down)] * (integral(all_hists[evt_type][Symbol(x, :_nominal)]) / integral(all_hists[evt_type][Symbol(x, var_down)]))
+                    end
+                end
+            end
+        end
     end
 
     workspace = Dict(
@@ -117,16 +126,16 @@ function generate_workspace_file(all_hists::DictT, filename, real_data; rebin2=t
                             reduce(append!, (systematics ? [
                                 Dict{Symbol, Any}[Dict(
                                     :data => Dict(
-                                        :hi => integral(all_hists[evt_type][Symbol(region, modifiers_dict[name][1])])/integral(all_hists[evt_type][Symbol(region, :_nominal)]),
-                                        :lo => integral(all_hists[evt_type][Symbol(region, modifiers_dict[name][2])])/integral(all_hists[evt_type][Symbol(region, :_nominal)]),
+                                        :hi => norm_factors[evt_type][Symbol(region, modifiers_dict[name][1])],
+                                        :lo => 2. - norm_factors[evt_type][Symbol(region, modifiers_dict[name][1])]
                                     ),
                                     :name => name,
                                     :type => "normsys"
                                 ),
                                 Dict(
                                     :data => Dict(
-                                        :hi_data => bincounts(all_hists[evt_type][Symbol(region, modifiers_dict[name][1])])*(integral(all_hists[evt_type][Symbol(region, :_nominal)])/integral(all_hists[evt_type][Symbol(region, modifiers_dict[name][1])])),
-                                        :lo_data => bincounts(all_hists[evt_type][Symbol(region, modifiers_dict[name][2])])*(integral(all_hists[evt_type][Symbol(region, :_nominal)])/integral(all_hists[evt_type][Symbol(region, modifiers_dict[name][2])]))
+                                        :hi_data => bincounts(all_hists[evt_type][Symbol(region, modifiers_dict[name][1])]),
+                                        :lo_data => bincounts(all_hists[evt_type][Symbol(region, modifiers_dict[name][2])])
                                     ),
                                     :name => name,
                                     :type => "histosys"
