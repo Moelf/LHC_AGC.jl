@@ -23,18 +23,18 @@ function get_histo_distributed(process_tag::Symbol, pmap::Function; file_variati
         wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
     end
 
-    files = Vector{Tuple{String, Symbol}}[]
+    files = Tuple{String, Symbol}[]
     for variation_tag in file_variation_tags
-        push!(files, Tuple{String, Symbol}[(path, variation_tag) for path in @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]])
+        append!(files, Tuple{String, Symbol}[(path, variation_tag) for path in @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]])
     end
 
     mainloop = function (tuple)
         path, variation_tag = tuple
         get_histo(LazyTree(path, "Events"), wgt,file_variation=variation_tag)
     end
-    dicts = [pmap(mainloop, file_pack) for file_pack in files]
+    dicts = pmap(mainloop, files)
 
-    return reduce(merge, reduce.(mergewith(+), dicts))
+    return reduce(mergewith(+), dicts)
 end
 
 function generate_hists(file_variation::Symbol)
