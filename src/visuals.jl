@@ -7,7 +7,8 @@ using CairoMakie
 Creates a plot for the stack of histograms in the 4j2b region for the mbjj variable.
 
 
-`all_hists` should be a dictionary of the form evt_type => hists_dict, where hists_dict is what get_histo(evt_type, ...) would return.
+`all_hists` should be a dictionary that `get_all_hists` would return or of the equivalent form: `evt_type => hists_dict`, where hists_dict is what get_histo(evt_type, ...) would return.
+
 if `evt_types` is `nothing` `keys(all_hists)` are used instead.
 
 `color` should be a vector of colors of a meaningful size.
