@@ -14,15 +14,12 @@ end
 """
 function get_histo(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
     N = n_files_max_per_sample
-    if iszero(wgt)
-        wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
-    end
 
     file_variation_tags = (do_file_variations ? keys(TAG_PATH_DICT[process_tag]) : [:nominal])
 
     all_hists = reduce(merge, [
         mapreduce(mergewith(+), @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]) do path
-            get_histo(LazyTree(path, "Events"), wgt, file_variation=variation_tag)
+            get_histo(LazyTree(path, "Events"), ((iszero(wgt)) ? (LUMI * xsec_info[process_tag] / nevts_total(process_tag, n_files_max_per_sample, variation_tag)) : wgt), file_variation=variation_tag)
         end for variation_tag in file_variation_tags
     ])
     all_hists
@@ -33,9 +30,6 @@ end
 """
 function get_histo_distributed(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
     N = n_files_max_per_sample
-    if iszero(wgt)
-        wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
-    end
 
     file_variation_tags = (do_file_variations ? keys(TAG_PATH_DICT[process_tag]) : [:nominal])
 
@@ -46,7 +40,7 @@ function get_histo_distributed(process_tag::Symbol; do_file_variations::Bool=tru
 
     mainloop = function (tuple)
         path, variation_tag = tuple
-        get_histo(LazyTree(path, "Events"), wgt,file_variation=variation_tag)
+        get_histo(LazyTree(path, "Events"), ((iszero(wgt)) ? (LUMI * xsec_info[process_tag] / nevts_total(process_tag, n_files_max_per_sample, variation_tag)) : wgt), file_variation=variation_tag)
     end
     dicts = pmap(mainloop, files)
 
