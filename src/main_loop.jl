@@ -10,7 +10,7 @@ function get_histo(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0
     file_variation_tags = (do_file_variations ? keys(TAG_PATH_DICT[process_tag]) : [:nominal])
 
     all_hists = reduce(merge, [
-        mapreduce(mergewith(+), @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]) do path
+        mapreduce(mergewith(+), first(TAG_PATH_DICT[process_tag][variation_tag], N)) do path
             get_histo(LazyTree(path, "Events"), wgt, file_variation=variation_tag)
         end for variation_tag in file_variation_tags
     ])
@@ -30,14 +30,17 @@ function get_histo_distributed(process_tag::Symbol; do_file_variations::Bool=tru
 
     files = Tuple{String, Symbol}[]
     for variation_tag in file_variation_tags
-        append!(files, Tuple{String, Symbol}[(path, variation_tag) for path in @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]])
+        append!(files, [(path, variation_tag) for path in first(TAG_PATH_DICT[process_tag][variation_tag],N)])
     end
 
-    mainloop = function (tuple)
-        path, variation_tag = tuple
+    # mainloop = function (tuple)
+    #     path, variation_tag = tuple
+    #     get_histo(LazyTree(path, "Events"), wgt,file_variation=variation_tag)
+    # end
+
+    dicts = progress_map(files; mapfun=robust_pmap) do (path, variation)
         get_histo(LazyTree(path, "Events"), wgt,file_variation=variation_tag)
     end
-    dicts = pmap(mainloop, files)
 
     return reduce(mergewith(+), dicts)
 end

@@ -4,6 +4,7 @@ using UnROOT, FHist, LorentzVectorHEP, JSON3
 using LorentzVectorHEP: fromPxPyPzM
 using Combinatorics: Combinations
 using Distributions
+using ProgressMeter, Parallelism
 
 include("constants.jl")
 include("syst_utils.jl")
