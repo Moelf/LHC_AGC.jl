@@ -19,7 +19,8 @@ end
     Convert xrd path from JSON to local path
 """
 function xrd_to_local(url)
-    joinpath(BASE_PATH[], last(split(url, '/')))
+    # joinpath(BASE_PATH[], last(split(url, '/')))
+    joinpath(BASE_PATH[], last(split(url, '/'), 2)...)
 end
 
 const TAG_PATH_DICT =

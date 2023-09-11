@@ -33,13 +33,8 @@ function get_histo_distributed(process_tag::Symbol; do_file_variations::Bool=tru
         append!(files, [(path, variation_tag) for path in first(TAG_PATH_DICT[process_tag][variation_tag],N)])
     end
 
-    # mainloop = function (tuple)
-    #     path, variation_tag = tuple
-    #     get_histo(LazyTree(path, "Events"), wgt,file_variation=variation_tag)
-    # end
-
-    dicts = progress_map(files; mapfun=robust_pmap) do (path, variation)
-        get_histo(LazyTree(path, "Events"), wgt,file_variation=variation_tag)
+    dicts = progress_map(files; mapfun=robust_pmap) do (path, tag)
+        get_histo(LazyTree(path, "Events"), wgt,file_variation=tag)
     end
 
     return reduce(mergewith(+), dicts)
@@ -76,7 +71,8 @@ end
 function get_histo(tree, wgt; file_variation::Symbol=:nominal, evts=nothing)
     is_nominal_file = (:nominal == file_variation)
     hists = generate_hists(file_variation)
-    Threads.@threads for evt in tree
+    #Threads.@threads for evt in tree
+    for evt in tree
         # single lepton requirement
         (; Electron_pt, Muon_pt) = evt
         (count(>(25), Electron_pt) + count(>(25), Muon_pt) != 1) && continue
