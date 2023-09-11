@@ -1,11 +1,19 @@
 """
+    get_all_hists(; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[], tags = LHC_AGC.TAGS, histo_getter=get_histo)
+
+Produces the `all_hists` dictionary that may be required for building `workspace.json` and plotting.
+
+`histo_getter` should either be `get_histo` or `get_histo_distributed`.
+"""
+function get_all_hists(; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[], tags = LHC_AGC.TAGS, histo_getter=get_histo)
+    Dict(tag => histo_getter(tag; do_file_variations, wgt, n_files_max_per_sample) for tag in tags)
+end
+
+"""
     get_histo(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
 """
 function get_histo(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
     N = n_files_max_per_sample
-    if iszero(wgt)
-        wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
-    end
 
     file_variation_tags = (do_file_variations ? keys(TAG_PATH_DICT[process_tag]) : [:nominal])
 
@@ -22,9 +30,6 @@ end
 """
 function get_histo_distributed(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
     N = n_files_max_per_sample
-    if iszero(wgt)
-        wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
-    end
 
     file_variation_tags = (do_file_variations ? keys(TAG_PATH_DICT[process_tag]) : [:nominal])
 
