@@ -25,24 +25,40 @@ function get_histo(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0
     all_hists
 end
 
-"""
-    get_histo_distributed(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
-"""
-function get_histo_distributed(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+Base.@kwdef struct AnalysisTask
+    proc_tag::Symbol
+    path::String
+    wgt::Float64
+    variation_tag::Symbol
+end
+
+function get_tasks(proc_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
     N = n_files_max_per_sample
 
-    file_variation_tags = (do_file_variations ? keys(TAG_PATH_DICT[process_tag]) : [:nominal])
+    file_variation_tags = (do_file_variations ? keys(TAG_PATH_DICT[proc_tag]) : [:nominal])
 
-    files = Tuple{String, Symbol}[]
+    tasks = AnalysisTask[]
     for variation_tag in file_variation_tags
-        append!(files, [(path, variation_tag) for path in first(TAG_PATH_DICT[process_tag][variation_tag],N)])
+        _wgt = iszero(wgt) ? (LUMI * xsec_info[proc_tag] / nevts_total(proc_tag, N, variation_tag)) : wgt
+        append!(tasks, [AnalysisTask(; proc_tag, path, wgt = _wgt, variation_tag) for path in first(TAG_PATH_DICT[proc_tag][variation_tag],N)])
+    end
+    return tasks
+end
+
+function get_histo(task::AnalysisTask)
+    get_histo(LazyTree(task.path, "Events"), task.wgt; file_variation = task.variation_tag)
+end
+
+"""
+    get_histo_distributed(process_tags::Vector{Symbol}; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+"""
+function get_histo_distributed(process_tags::Vector{Symbol}; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+    all_tasks = mapreduce(p-> get_tasks(p; do_file_variations, wgt, n_files_max_per_sample), vcat, process_tags)
+    dicts = progress_map(all_tasks; mapfun=robust_pmap) do task
+        return Dict(task.proc_tag => get_histo(task))
     end
 
-    dicts = progress_map(files; mapfun=robust_pmap) do (path, tag)
-        get_histo(LazyTree(path, "Events"), wgt,file_variation=tag)
-    end
-
-    return reduce(mergewith(+), dicts)
+    return reduce(mergewith(mergewith(+)), dicts)
 end
 
 function generate_hists(file_variation::Symbol)

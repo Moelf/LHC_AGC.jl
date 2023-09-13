@@ -12,7 +12,7 @@ include("main_loop.jl")
 include("visuals.jl")
 
 function nevts_total(process_tag, n_files_max_per_sample, variation=:nominal)
-    mapreduce(+, NJSON[process_tag][variation][:files][1:n_files_max_per_sample]) do arg
+    mapreduce(+, first(NJSON[process_tag][variation][:files], n_files_max_per_sample)) do arg
         arg["nevts"]
     end
 end
