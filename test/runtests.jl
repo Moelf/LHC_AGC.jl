@@ -16,7 +16,7 @@ end
 """
 A function for test comparison
 """
-function AGC_quicktest(filepath, _bincounts, wgt, hist_types_to_match; eps=0.01)
+function AGC_quicktest(filepath, _bincounts, wgt, hist_types_to_match; eps=0.01) # this one runs the get_histo and compares the processed events by id as well as the bincounts
     tt_tree = LazyTree(filepath, "Events")
     evts = Dict(k => Int[] for k in hist_types_to_match)
     res = LHC_AGC.get_histo(tt_tree, wgt; evts=evts)
@@ -33,7 +33,7 @@ function AGC_quicktest(filepath, _bincounts, wgt, hist_types_to_match; eps=0.01)
 
     res
 end
-function AGC_quicktest(res, _bincounts; eps=0.01)
+function AGC_quicktest(res, _bincounts; eps=0.01) # this one doesn't run the get_histo and expects the result to be already given to it and only compares the bincounts
     for k in keys(_bincounts)
         # test bincounts
         @test (maximum(abs.(bincounts(res[k]) - _bincounts[k])) <= eps)

@@ -84,6 +84,7 @@ function generate_hists(file_variation::Symbol)
     return hists
 end
 
+## THIS IS ACTUALLY THE MAIN LOOP, WHICH GETS CALLED FROM EVERY VERSION OF get_histo
 """
     get_histo(tree, wgt; file_variation::Symbol=:nominal, evts=nothing)
 
@@ -126,10 +127,8 @@ function get_histo(tree, wgt; file_variation::Symbol=:nominal, evts=nothing)
 
                     # construct jet lorentz vector
                     jet_p4 = @views LorentzVectorCyl.(Jet_pt[jet_pt_mask], Jet_eta[jet_pt_mask], Jet_phi[jet_pt_mask], Jet_mass[jet_pt_mask])
-                    #jet_p4 = @views fromPxPyPzM.(Jet_px[jet_pt_mask], Jet_py[jet_pt_mask], Jet_pz[jet_pt_mask], Jet_mass[jet_pt_mask])
 
-                    Njets = length(jet_btag) 
-                    # Njets == length(jet_p4) || error("impossible reached")
+                    Njets = length(jet_btag)
 
                     # tri jet combinatorics
                     max_pt = -Inf
