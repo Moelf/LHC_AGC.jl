@@ -1,45 +1,64 @@
 """
+    get_all_hists(; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[], tags = LHC_AGC.TAGS, histo_getter=get_histo)
+
+Produces the `all_hists` dictionary that may be required for building `workspace.json` and plotting.
+
+`histo_getter` should either be `get_histo` or `get_histo_distributed`.
+"""
+function get_all_hists(; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[], tags = LHC_AGC.TAGS, histo_getter=get_histo)
+    Dict(tag => histo_getter(tag; do_file_variations, wgt, n_files_max_per_sample) for tag in tags)
+end
+
+"""
     get_histo(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
 """
 function get_histo(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
     N = n_files_max_per_sample
-    if iszero(wgt)
-        wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
-    end
 
     file_variation_tags = (do_file_variations ? keys(TAG_PATH_DICT[process_tag]) : [:nominal])
 
     all_hists = reduce(merge, [
-        mapreduce(mergewith(+), @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]) do path
+        mapreduce(mergewith(+), first(TAG_PATH_DICT[process_tag][variation_tag], N)) do path
             get_histo(LazyTree(path, "Events"), wgt, file_variation=variation_tag)
         end for variation_tag in file_variation_tags
     ])
     all_hists
 end
 
-"""
-    get_histo_distributed(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
-"""
-function get_histo_distributed(process_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+Base.@kwdef struct AnalysisTask
+    proc_tag::Symbol
+    path::String
+    wgt::Float64
+    variation_tag::Symbol
+end
+
+function get_tasks(proc_tag::Symbol; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
     N = n_files_max_per_sample
-    if iszero(wgt)
-        wgt = LUMI * xsec_info[process_tag] / nevts_total(process_tag)
-    end
 
-    file_variation_tags = (do_file_variations ? keys(TAG_PATH_DICT[process_tag]) : [:nominal])
+    file_variation_tags = (do_file_variations ? keys(TAG_PATH_DICT[proc_tag]) : [:nominal])
 
-    files = Tuple{String, Symbol}[]
+    tasks = AnalysisTask[]
     for variation_tag in file_variation_tags
-        append!(files, Tuple{String, Symbol}[(path, variation_tag) for path in @view TAG_PATH_DICT[process_tag][variation_tag][begin:N]])
+        _wgt = iszero(wgt) ? (LUMI * xsec_info[proc_tag] / nevts_total(proc_tag, N, variation_tag)) : wgt
+        append!(tasks, [AnalysisTask(; proc_tag, path, wgt = _wgt, variation_tag) for path in first(TAG_PATH_DICT[proc_tag][variation_tag],N)])
+    end
+    return tasks
+end
+
+function get_histo(task::AnalysisTask)
+    get_histo(LazyTree(task.path, "Events"), task.wgt; file_variation = task.variation_tag)
+end
+
+"""
+    get_histo_distributed(process_tags::Vector{Symbol}; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+"""
+function get_histo_distributed(process_tags::Vector{Symbol}; do_file_variations::Bool=true, wgt = 0.0, n_files_max_per_sample = MAX_N_FILES_PER_SAMPLE[])
+    all_tasks = mapreduce(p-> get_tasks(p; do_file_variations, wgt, n_files_max_per_sample), vcat, process_tags)
+    dicts = progress_map(all_tasks; mapfun=robust_pmap) do task
+        return Dict(task.proc_tag => get_histo(task))
     end
 
-    mainloop = function (tuple)
-        path, variation_tag = tuple
-        get_histo(LazyTree(path, "Events"), wgt,file_variation=variation_tag)
-    end
-    dicts = pmap(mainloop, files)
-
-    return reduce(mergewith(+), dicts)
+    return reduce(mergewith(mergewith(+)), dicts)
 end
 
 function generate_hists(file_variation::Symbol)
@@ -65,6 +84,7 @@ function generate_hists(file_variation::Symbol)
     return hists
 end
 
+## THIS IS ACTUALLY THE MAIN LOOP, WHICH GETS CALLED FROM EVERY VERSION OF get_histo
 """
     get_histo(tree, wgt; file_variation::Symbol=:nominal, evts=nothing)
 
@@ -73,7 +93,8 @@ end
 function get_histo(tree, wgt; file_variation::Symbol=:nominal, evts=nothing)
     is_nominal_file = (:nominal == file_variation)
     hists = generate_hists(file_variation)
-    Threads.@threads for evt in tree
+    #Threads.@threads for evt in tree
+    for evt in tree
         # single lepton requirement
         (; Electron_pt, Muon_pt) = evt
         (count(>(25), Electron_pt) + count(>(25), Muon_pt) != 1) && continue
@@ -106,10 +127,8 @@ function get_histo(tree, wgt; file_variation::Symbol=:nominal, evts=nothing)
 
                     # construct jet lorentz vector
                     jet_p4 = @views LorentzVectorCyl.(Jet_pt[jet_pt_mask], Jet_eta[jet_pt_mask], Jet_phi[jet_pt_mask], Jet_mass[jet_pt_mask])
-                    #jet_p4 = @views fromPxPyPzM.(Jet_px[jet_pt_mask], Jet_py[jet_pt_mask], Jet_pz[jet_pt_mask], Jet_mass[jet_pt_mask])
 
-                    Njets = length(jet_btag) 
-                    # Njets == length(jet_p4) || error("impossible reached")
+                    Njets = length(jet_btag)
 
                     # tri jet combinatorics
                     max_pt = -Inf

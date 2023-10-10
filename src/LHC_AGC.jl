@@ -4,21 +4,32 @@ using UnROOT, FHist, LorentzVectorHEP, JSON3
 using LorentzVectorHEP: fromPxPyPzM
 using Combinatorics: Combinations
 using Distributions
+using ProgressMeter, Parallelism
 
 include("constants.jl")
 include("syst_utils.jl")
 include("main_loop.jl")
 include("visuals.jl")
 
-function nevts_total(process_tag, variation=:nominal)
-    NJSON[process_tag][variation][:nevts_total]
+"""
+    nevts_total(process_tag, n_files_max_per_sample, variation=:nominal)
+
+calculates the number of events in the processed files given the process tag and the maximal number of files per sample.
+"""
+function nevts_total(process_tag, n_files_max_per_sample, variation=:nominal)
+    mapreduce(+, first(NJSON[process_tag][variation][:files], n_files_max_per_sample)) do arg
+        arg["nevts"]
+    end
 end
 
 """
-    Convert xrd path from JSON to local path
+    xrd_to_local(url)
+
+Convert xrd path from JSON to local path
 """
 function xrd_to_local(url)
-    joinpath(BASE_PATH[], last(split(url, '/')))
+    # joinpath(BASE_PATH[], last(split(url, '/')))
+    joinpath(BASE_PATH[], last(split(url, '/'), 2)...)
 end
 
 const TAG_PATH_DICT =
@@ -29,7 +40,7 @@ const TAG_PATH_DICT =
     )
 
 """
-    download_data(N; process_tags=[:ttbar])
+    download_data(N = MAX_N_FILES_PER_SAMPLE[]; process_tags = [:ttbar], variation_tags = [:nominal])
 
 Download `N` files for each of the process tags.
 """
@@ -53,7 +64,7 @@ function download_data(N = MAX_N_FILES_PER_SAMPLE[]; process_tags = [:ttbar], va
 end
 
 """
-    generate_workspace_file(all_hists::Dict, filename, real_data; rebin2=true, systematics=false)::Dict
+    generate_workspace_file(all_hists::DictT, filename, real_data; rebin2=true, systematics=false)::Dict where DictT
 
 
 Generates a workspace dictionary, writes it to a JSON file and returns
@@ -97,7 +108,6 @@ function generate_workspace_file(all_hists::DictT, filename, real_data; rebin2=t
         for evt_type in keys(all_hists)
             norm_factors[evt_type] = Dict{Symbol, Float64}()
             for x in keys(region_names)
-                # symmetric reconstruction of the _down
                 for (var, var_down) in (values(modifiers_dict[evt_type]))
                     norm = norm_factors[evt_type][Symbol(x, var)] = integral(all_hists[evt_type][Symbol(x, var)])/integral(all_hists[evt_type][Symbol(x, :_nominal)])
                     all_hists[evt_type][Symbol(x, var)] = all_hists[evt_type][Symbol(x, var)]*(1. / norm) # normalise the up variation
@@ -109,7 +119,7 @@ function generate_workspace_file(all_hists::DictT, filename, real_data; rebin2=t
                 end
             end
         end
-        # reconstruct these separately for ttbar only
+        # reconstruct these (symmetrically) separately for ttbar only
         for x in keys(region_names)
             for (var, var_down) in [(:_ME_var, :_ME_var_sym), (:_PS_var, :_PS_var_sym)]
             all_hists[:ttbar][Symbol(x, var_down)] = all_hists[:ttbar][Symbol(x, :_nominal)]*2 - all_hists[:ttbar][Symbol(x, var)]
